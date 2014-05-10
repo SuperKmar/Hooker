@@ -1,0 +1,46 @@
+object Form1: TForm1
+  Left = 301
+  Height = 334
+  Top = 156
+  Width = 736
+  Caption = 'Form1'
+  ClientHeight = 334
+  ClientWidth = 736
+  OnCreate = FormCreate
+  OnDestroy = FormDestroy
+  LCLVersion = '1.2.0.3'
+  object Button1: TButton
+    Left = 15
+    Height = 25
+    Top = 8
+    Width = 227
+    Caption = 'Rescan'
+    OnClick = Button1Click
+    TabOrder = 0
+  end
+  object Button2: TButton
+    Left = 248
+    Height = 25
+    Top = 8
+    Width = 248
+    Caption = 'watch selected'
+    OnClick = Button2Click
+    TabOrder = 1
+  end
+  object ListBox1: TListBox
+    Left = 16
+    Height = 288
+    Top = 40
+    Width = 224
+    ItemHeight = 0
+    TabOrder = 2
+  end
+  object ListBox2: TListBox
+    Left = 248
+    Height = 288
+    Top = 40
+    Width = 248
+    ItemHeight = 0
+    TabOrder = 3
+  end
+end
