@@ -67,6 +67,7 @@ var
   Security: Security_Attributes;
   WriteMemRes:boolean;
   ModuleHandle:THandle;
+  TempOffset: dword;
 begin
   //here, we take a look at pipe handeling - we are the pipe server i think.
 
@@ -74,7 +75,7 @@ begin
 
 
 
-    ProcessHandle:= OpenProcess(PROCESS_VM_READ or PROCESS_VM_WRITE, true, RemoteProcID); //this works?
+    ProcessHandle:= OpenProcess(PROCESS_ALL_ACCESS, true, RemoteProcID); //this works?
     output.Items.add('Proc Handle:'+ inttostr(ProcessHandle));
     //do something with the handle... find dll place and go on from there
     // полагаю, что ковырять будем kernel32.dll
@@ -86,22 +87,20 @@ begin
     ModuleHandle := GetModuleHandle('Kernel32'); //this works
     output.Items.add('kernel32 handle:'+ inttostr(ModuleHandle));
 
-    pfnThreadRTN := GetProcAddress(ModuleHandle, 'LoadLibraryW'); //can't get proc addr   //this must be sent via allocated memory? //Fixed - it works now
+    pfnThreadRTN := GetProcAddress(ModuleHandle, 'LoadLibraryW'); //this must be sent via allocated memory? //Fixed - it works now
     output.Items.add('got Proc address:'+ inttostr(integer(pfnThreadRTN)));
 
 
-    //the string must be a var, sent thriugh virtual memory
-    VMemAddr:=VirtualAllocEx( ProcessHandle,
-                              nil,
-                              TempSize,
-                              MEM_COMMIT,  //or MEM_RESERVE
-                              PAGE_READWRITE); //_EXCECUTE_READWRITE      //this fails
+    //the string must be a var, sent thriugh virtual memory  //this fails
+    VMemAddr:=VirtualAllocEx( ProcessHandle,   //no way this is wrong
+                              nil,   //don't think this is wrong
+                              TempSize, //might be off by 1 or 2, but should still show something at this point
+                              MEM_COMMIT,  //or MEM_RESERVE //no way this is wrong
+                              PAGE_READWRITE); //_EXCECUTE_READWRITE  //no way this is wrong
+
 
     output.Items.add('virtual memory allocated at:'+ inttostr(integer(VMemAddr)));
-    //MessageBox(handle, 'got mem', 'yo', 0);
 
-
-//    BytesWritten:= NULL;
 
     WriteMemRes := WriteProcessMemory( ProcessHandle,
                         VMemAddr,
@@ -120,7 +119,7 @@ begin
                                               pfnThreadRTN,
                                               @ProcessHandle,
                                               0,
-                                              BytesWritten); //nil needs to become a longword
+                                              TempOffset); //nil needs to become a longword
 
     output.Items.add('got remote thread handle:'+ inttostr(RemoteThreadHandle));
 
@@ -189,7 +188,6 @@ var
   pa: TProcessEntry32;
   RetVal: THandle;
   sList: TStringList;
-  i:integer;
 
  procedure AddProcItem(ProcItem: TProcessEntry32);
  begin
@@ -227,13 +225,7 @@ end;
 procedure TForm1.Button2Click(Sender: TObject);
 var
   i:integer;
-  pfnThreadRtn: PTHREAD_START_ROUTINE;
-  RemoteThreadID: longword; //was longword
-  VMemAddr: pointer;
   InjectLib:String;
-  TempSize:dword;
-  SomeNullString:PAnsiString;
-  BytesWritten: dword;
 begin
   // if something is selected, splice the .dll file
   if listbox1.ItemIndex >=0 then
