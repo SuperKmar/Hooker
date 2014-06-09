@@ -112,7 +112,6 @@ begin
     output.Items.add('Written into virtual memory:'+ booltostr(WriteMemRes)+' - ' + inttostr(BytesWritten) +' bytes');
 
 
-
     RemoteThreadHandle := CreateRemoteThread( ProcessHandle,
                                               nil,
                                               0,
