@@ -5,7 +5,7 @@ unit Unit1;
 interface
 
 uses
-  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, JwaTlHelp32,windows;
+  Classes, SysUtils, FileUtil, Forms, Controls, Graphics, Dialogs, StdCtrls, JwaTlHelp32,windows, IATHook;
 
 type
 
@@ -83,7 +83,6 @@ begin
     TempSize := Length(InjectLib);
     TempSize:= TempSize*SizeOf(WChar);
 
-
     ModuleHandle := GetModuleHandle('Kernel32'); //this works
     output.Items.add('kernel32 handle:'+ inttostr(ModuleHandle));
 
@@ -135,6 +134,7 @@ begin
 
     CloseHandle(ProcessHandle); //move this to a more appropriate spot - no way we are done in one go... all of this should be in the pipe thread -_-
 
+    FileWrite
 
 
    //
@@ -238,7 +238,7 @@ begin
     Listbox2.Items.Add('ProcessID:' +inttostr(ProcArray[i].th32ProcessID));
     ListBox3.Clear;
 
-    InjectLib:=GetCurrentDir+'\Inject.dll';
+    InjectLib:=GetCurrentDir+'\IATHook.dll'; // - let's hope that we only need the name for this to work
 
     MyPipe := TMyPipeThread.create(true);
     MyPipe.InjectLib:=InjectLib;

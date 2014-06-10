@@ -3,7 +3,7 @@ unit IATHook;
 interface
 
 uses
-  Windows, PSAPI, SysUtils;
+  Windows, PSAPI, SysUtils; //PSAPI, was used here, can't find anymore :(
 
 type
   TTHREADENTRY32 = packed record
@@ -15,6 +15,9 @@ type
     tpDeltaPri: Longint;
     dwFlags: DWORD;
   end;
+
+var
+  message:String;
 
 
 const
@@ -41,7 +44,64 @@ function PatchIAT(Module: HMODULE; LibraryName, ProcName: PAnsiChar; HookProc: P
 function StopThreads(): boolean;
 function RunThreads(): boolean;
 
+function placeholder():boolean; //this might be called "DLLMain" - try to rename later
+
+
+//Function FileWrite (Handle : THandle; const Buffer; Count : Longint) : Longint;
+function my_FileWrite(Handle : THandle; const Buffer; Count : Longint) : Longint;
+//Function FileRead (Handle : THandle; out Buffer; Count : longint) : Longint;
+function my_FileRead (Handle : THandle; out Buffer; Count : longint) : Longint;
+
 implementation
+function my_FileWrite(Handle : THandle; const Buffer; Count : Longint) : Longint;
+begin
+  result := FileWrite(Handle, Buffer,  Count );
+//  message:= 'File is being written';
+  messagebox(0,'File is being written!', 'Some program is doing something', 0);
+end;
+
+function my_FileRead (Handle : THandle; out Buffer; Count : longint) : Longint;
+begin
+  result := FileRead(Handle, Buffer, Count);
+  messagebox(0, 'File is being read!', 'Some program is doing something', 0);
+end;
+
+
+function placeholder():boolean;
+var
+  SaveProcWrite, SaveProcRead: PCardinal;
+  Module:HMODULE;
+begin
+//  TTHREADENTRY32.th32OwnerProcessID := getProcessID();
+
+
+  //stop proc - there's an app for that
+  StopThreads();
+  ////StopProcess( TTHREADENTRY32.th32OwnerProcessID );   //assume thix will fix itself when psapi gets fixed
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  ////start hooking - what we need is...
+  /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+  //function PatchIAT(Module: HMODULE; LibraryName, ProcName: PAnsiChar; HookProc: Pointer; var SaveProc: Pointer): Boolean;
+  Module := 0; // what module? what to write here?
+  PatchIAT(Module, 'Kernel32', 'FileWrite', @My_FileWrite, SaveProcWrite);
+  PatchIAT(Module, 'Kernel32', 'FileRead' , @My_FileRead , SaveProcRead ); //i have no idea if this will jsut work -_- fingers crossed
+
+
+  /////////////////////////////////////////////////////////////////////////////////////////////////////
+  //set transfer method (i guess by pipe? virtual mem should work as well...)
+  /////////////////////////////////////////////////////////////////////////////////////////////////////
+  //i'll do it after message box shows something
+
+
+
+
+
+  //resume proc - there's an app for that
+  //RunProcess( TTHREADENTRY32.th32OwnerProcessID );
+  RunThreads();
+end;
 
 function StopProcess(ProcessId: dword): boolean;
 var
