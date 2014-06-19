@@ -59,4 +59,13 @@ object Form1: TForm1
     Caption = 'Output'
     ParentColor = False
   end
+  object Button3: TButton
+    Left = 608
+    Height = 25
+    Top = 8
+    Width = 120
+    Caption = 'Kill thread'
+    OnClick = Button3Click
+    TabOrder = 5
+  end
 end

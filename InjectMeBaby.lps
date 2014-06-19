@@ -1,0 +1,141 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CONFIG>
+  <ProjectSession>
+    <PathDelim Value="\"/>
+    <Version Value="9"/>
+    <BuildModes Active="Default"/>
+    <Units Count="4">
+      <Unit0>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <IsPartOfProject Value="True"/>
+        <UnitName Value="InjectMeBaby"/>
+        <IsVisibleTab Value="True"/>
+        <EditorIndex Value="0"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="134"/>
+        <CursorPos X="47" Y="166"/>
+        <UsageCount Value="43"/>
+        <Loaded Value="True"/>
+      </Unit0>
+      <Unit1>
+        <Filename Value="IATHook.pas"/>
+        <UnitName Value="IATHook"/>
+        <EditorIndex Value="2"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="151"/>
+        <CursorPos X="3" Y="168"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit1>
+      <Unit2>
+        <Filename Value="psapi.pas"/>
+        <UnitName Value="PsAPI"/>
+        <EditorIndex Value="3"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="127"/>
+        <CursorPos X="10" Y="145"/>
+        <UsageCount Value="20"/>
+        <Loaded Value="True"/>
+      </Unit2>
+      <Unit3>
+        <Filename Value="C:\lazarus\fpc\2.6.2\source\rtl\objpas\classes\classesh.inc"/>
+        <EditorIndex Value="1"/>
+        <WindowIndex Value="0"/>
+        <TopLine Value="1557"/>
+        <CursorPos X="15" Y="1575"/>
+        <UsageCount Value="10"/>
+        <Loaded Value="True"/>
+      </Unit3>
+    </Units>
+    <General>
+      <ActiveWindowIndexAtStart Value="0"/>
+    </General>
+    <JumpHistory Count="21" HistoryIndex="20">
+      <Position1>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="495" Column="1" TopLine="462"/>
+      </Position1>
+      <Position2>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="15" Column="15" TopLine="1"/>
+      </Position2>
+      <Position3>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="19" Column="13" TopLine="1"/>
+      </Position3>
+      <Position4>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="15" Column="3" TopLine="1"/>
+      </Position4>
+      <Position5>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="17" Column="74" TopLine="1"/>
+      </Position5>
+      <Position6>
+        <Filename Value="IATHook.pas"/>
+        <Caret Line="150" Column="50" TopLine="135"/>
+      </Position6>
+      <Position7>
+        <Filename Value="IATHook.pas"/>
+        <Caret Line="183" Column="45" TopLine="152"/>
+      </Position7>
+      <Position8>
+        <Filename Value="IATHook.pas"/>
+        <Caret Line="152" Column="28" TopLine="133"/>
+      </Position8>
+      <Position9>
+        <Filename Value="IATHook.pas"/>
+        <Caret Line="184" Column="23" TopLine="154"/>
+      </Position9>
+      <Position10>
+        <Filename Value="IATHook.pas"/>
+        <Caret Line="163" Column="90" TopLine="145"/>
+      </Position10>
+      <Position11>
+        <Filename Value="IATHook.pas"/>
+        <Caret Line="495" Column="6" TopLine="336"/>
+      </Position11>
+      <Position12>
+        <Filename Value="IATHook.pas"/>
+        <Caret Line="169" Column="3" TopLine="139"/>
+      </Position12>
+      <Position13>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="98" Column="55" TopLine="83"/>
+      </Position13>
+      <Position14>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="99" Column="29" TopLine="83"/>
+      </Position14>
+      <Position15>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="111" Column="8" TopLine="89"/>
+      </Position15>
+      <Position16>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="112" Column="24" TopLine="94"/>
+      </Position16>
+      <Position17>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="113" Column="19" TopLine="95"/>
+      </Position17>
+      <Position18>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="133" Column="1" TopLine="116"/>
+      </Position18>
+      <Position19>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="117" Column="47" TopLine="98"/>
+      </Position19>
+      <Position20>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="135" Column="34" TopLine="119"/>
+      </Position20>
+      <Position21>
+        <Filename Value="InjectMeBaby.lpr"/>
+        <Caret Line="137" Column="34" TopLine="119"/>
+      </Position21>
+    </JumpHistory>
+  </ProjectSession>
+  <EditorMacros Count="0"/>
+</CONFIG>

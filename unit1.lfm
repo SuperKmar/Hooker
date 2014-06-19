@@ -4,8 +4,8 @@ object Form1: TForm1
   Top = 156
   Width = 736
   Caption = 'Form1'
-  ClientHeight = 0
-  ClientWidth = 0
+  ClientHeight = 334
+  ClientWidth = 736
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   LCLVersion = '1.2.0.3'
@@ -58,5 +58,14 @@ object Form1: TForm1
     Width = 38
     Caption = 'Output'
     ParentColor = False
+  end
+  object Button3: TButton
+    Left = 608
+    Height = 25
+    Top = 8
+    Width = 120
+    Caption = 'Kill thread'
+    OnClick = Button3Click
+    TabOrder = 5
   end
 end
