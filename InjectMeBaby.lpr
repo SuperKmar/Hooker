@@ -3,12 +3,11 @@ library InjectMeBaby;
 {$mode objfpc}{$H+}
 
 uses
-  windows, classes,IATHOOK
+  windows, sysutils, IATHOOK
   //classes are big... copy  parts that you need later
   //one word to rule them all... just figure out what the hell i did with this thing and you'll get the idea
   { you can add units after this };
 
-type
   /////////////////////////////////////////////////////////////////////////////
   //TNotifyEvent = procedure(Sender: TObject) of object;
   //THelpEvent = function (Command: Word; Data: Longint;
@@ -96,12 +95,8 @@ type
   //
   ////////////////////////////////////////////////////////////////////////////////
 
-  InjThread = class(TThread)
-    public
-      procedure execute; override;
-  end;
 
-procedure InjThread.execute;
+function ThreadProc(lParam: Integer): Integer; stdcall;
 var
 //  pipename:string;
   pipehandle:THandle;
@@ -111,7 +106,13 @@ var
   res:boolean;
 begin
   // here we... what do we even do here?
+  try
   placeholder;
+
+  except
+    on E: Exception do
+      MessageBox(0, PAnsiChar(AnsiString(E.Message)), 'error', 0);
+  end;
 
   //pipename:= PAnsiChar('\\.\pipe\spypipe');
   MessageBox(0, 'Starting another thread on this bad boy', 'lalalala', 0);
@@ -149,8 +150,8 @@ begin
 end;
 
 var
-  MyInjThread:InjThread;
-
+  Th: THandle;
+  ThID: DWORD;
 begin
   //main proc code goes here
 
@@ -159,12 +160,13 @@ begin
 
   //create a new thread for keeping the injected stuff on a roll
   //new threads are harder then this... goto wasm :(
-  messagebox(0, 'Beggining the inside thread', 'Thread making', 0);
-  MyInjThread := InjThread.Create(true);
-  MyInjThread.FreeOnTerminate:=true;
-  MyInjThread.Resume;
-  messagebox(0, 'thread weaving done... now things die', 'Thread making', 0);
+  //messagebox(0, 'Beggining the inside thread', 'Thread making', 0);
+//  MyInjThread := InjThread.Create(true);
+//  MyInjThread.FreeOnTerminate:=true;
+//  MyInjThread.Resume;
+  //messagebox(0, 'thread weaving done... now things die', 'Thread making', 0);
 
-
+  Th := CreateThread(nil, 0, @ThreadProc, nil, 0, THID);
+  CloseHandle(Th);
 end.
 

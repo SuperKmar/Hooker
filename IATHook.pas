@@ -145,11 +145,15 @@ end;
 
 begin
   result:=true;
-
   //stop proc - there's an app for that
   result:= result and StopThreads();
-  temp := 'Threads have stopped: '+quickres;
-  messagebox(0, PChar(temp), 'Library police', 0);
+  if not result then exit;
+//  temp := 'Threads have stopped: '+quickres;
+  try
+
+
+  try
+  //messagebox(0, PChar(temp), 'Library police', 0);
   ////StopProcess( TTHREADENTRY32.th32OwnerProcessID );   //assume thix will fix itself when psapi gets fixed
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -157,28 +161,41 @@ begin
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
   //function PatchIAT(Module: HMODULE; LibraryName, ProcName: PAnsiChar; HookProc: Pointer; var SaveProc: Pointer): Boolean;
-  Module := GetModuleHandle('Kernel32'); // what module? what to write here?
-  temp := 'Module has beed identified: ' + quickres + ' - '+ inttostr(integer(Module));
-  messagebox(0, PChar(temp) , 'Library police', 0);
-  result:= result and   PatchIAT(Module, PAnsiChar('Kernel32'), PAnsiChar('FileWrite'), @My_FileWrite, SaveProcWrite);
-  temp := 'Filewrite has been patched: ' + quickres + inttostr(integer(SaveProcWrite));
-  messagebox(0, PChar(temp) , 'Library police', 0);
-  result:= result and   PatchIAT(Module, 'Kernel32', 'FileRead' , @My_FileRead , SaveProcRead ); //i have no idea if this will just work -_- fingers crossed
-  temp:= 'File read has been patched: ' + quickres;
-  messagebox(0, PChar(temp) , 'Library police', 0);
+
+  Module := GetModuleHandle(nil); // what module? what to write here?
+
+  //temp := 'Module has beed identified: ' + quickres + ' - '+ inttostr(integer(Module));
+  //messagebox(0, PChar(temp) , 'Library police', 0);
+
+  result:= result and   PatchIAT(Module, PAnsiChar('kernel32.dll'), PAnsiChar('WriteFile'), @My_FileWrite, SaveProcWrite);
+
+  //temp := 'Filewrite has been patched: ' + quickres + inttostr(integer(SaveProcWrite));
+  //messagebox(0, PChar(temp) , 'Library police', 0);
+
+  result:= result and   PatchIAT(Module, 'kernel32.dll', 'ReadFile' , @My_FileRead , SaveProcRead ); //i have no idea if this will just work -_- fingers crossed
+
+  //temp:= 'File read has been patched: ' + quickres;
+  //messagebox(0, PChar(temp) , 'Library police', 0);
 
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////
   //set transfer method (i guess by pipe? virtual mem should work as well...)
   /////////////////////////////////////////////////////////////////////////////////////////////////////
   //i'll do it after message box shows something
-
+  finally
   //resume proc - there's an app for that
   //RunProcess( TTHREADENTRY32.th32OwnerProcessID );
   result:= result and   RunThreads();
-  temp := 'Threads have resumed' + quickres;
-  messagebox(0, PChar(temp) , 'Library police', 0);
+  //temp := 'Threads have resumed' + quickres;
+  //messagebox(0, PChar(temp) , 'Library police', 0);
+  //except
+  end;
 
+  except
+
+    messagebox(0, 'try-except case', ',' , 0);
+
+  end;
   //  result is true if everything is ok, else false;
 end;
 
@@ -407,7 +424,7 @@ var
   SectionsNumber: Cardinal;
   SectionHeader: PImageSectionHeader;
 
-  PID: PImageImportDescriptor;
+  PID, TempPID: PImageImportDescriptor;
 
   Thunk: PCardinal;
 
@@ -426,6 +443,11 @@ begin
   IATDirBaseRVA := PEHeader^.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IAT].VirtualAddress;
   IATDirSize    := PEHeader^.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IAT].Size;
 
+  //messagebox(0, PAnsiChar('DirBaseRVA = ' + Inttostr(integer(DirBaseRVA))), 'ScanImportDirectory', 0);
+  //messagebox(0, PAnsiChar('DirSize = ' + Inttostr(integer(DirSize))), 'ScanImportDirectory', 0);
+  //messagebox(0, PAnsiChar('IATDirBaseRVA = ' + Inttostr(integer(IATDirBaseRVA))), 'ScanImportDirectory', 0);
+  //messagebox(0, PAnsiChar('IATDirSize = ' + Inttostr(integer(IATDirSize))), 'ScanImportDirectory', 0);
+
   if (DirBaseRVA = 0) or (DirSize = 0) or (IATDirBaseRVA = 0) or (IATDirSize = 0) then Exit;
 
   SectionsNumber := PEHeader^.FileHeader.NumberOfSections;
@@ -435,7 +457,10 @@ begin
   for i := 0 to SectionsNumber - 1 do
     begin
       if IsBadReadPtr(SectionHeader, sizeof(TImageSectionHeader)) then
+      begin
+        MessageBox(0, 'Sectionheader is a bad pointer', 'ScanImportDirectory', 0);
         Break;
+      end;
       if (DirBaseRVA >= SectionHeader^.VirtualAddress) and (DirBaseRVA < SectionHeader^.VirtualAddress+SectionHeader^.SizeOfRawData) then
         begin
           Index := i;
@@ -448,13 +473,29 @@ begin
     begin
 //      BadPointer := false;
       PID := PImageImportDescriptor(DirBaseRVA + Base);
+      tempPID:= PID;
+      //MessageBox(0, PAnsiChar(Inttostr(Integer(PID))), 'PID', 0);
+      //
+      //MessageBox(0, PAnsiChar(Inttostr(Integer(PID^.FirstThunk))), 'PID^.FirstThunk', 0);
+      //MessageBox(0, PAnsiChar(Inttostr(Integer(PID^.OriginalFirstThunk))), 'PID^.OriginalFirstThunk', 0);
+
+
       repeat
         if IsBadReadPtr(PID, sizeof(TImageImportDescriptor)) then
+        begin
+          messagebox(0, 'Is Bad Read Pointer at PID', 'ScanImportDirectory',0);
           Break;
+        end;
         if PID^.OriginalFirstThunk = 0 then
+        begin
+          messagebox(0, PAnsiChar(Inttostr(Integer((Integer(PID) - Integer(TempPID)) div 20))), 'ScanImportDirectory - iteration Index',0);
           Break;
+        end;
         if IsBadReadPtr(Pointer(Base+PID^.Name), strlen(ModuleName)+1) then
+        begin
+          messagebox(0, 'Is Bad Read Pointer at Base + PID^name', 'ScanImportDirectory',0);
           Break;
+        end;
 
         if AnsiStrIComp(PAnsiChar(Base + PID^.Name), ModuleName) = 0 then
           begin
@@ -479,8 +520,15 @@ begin
                 Inc(Thunk);
               end;
           end;
+        //TempPID:= PID;
         Inc(PID);
+//        MessageBox(0, PAnsiChar(Inttostr(Integer(PID)) +  '   ' + Inttostr(Integer(tempPID))), 'PID, tempPID', 0);
+
       until Result <> nil;
+    end else
+    begin
+      MessageBox(0, '(Index > -1) and (Index < SectionsNumber) - this condition failed...' , 'ScanImportLibrary', 0 );
+      MessageBox(0, PAnsiChar(Inttostr(Integer(Index))), 'Index of previous message', 0);
     end;
 end;
 
@@ -493,7 +541,12 @@ begin
   Result := false;
   Stub := nil;
   if GetModuleInformation(GetCurrentProcess, Module, @ModInfo, sizeof(ModInfo)) then
-    Stub := ScanImportDirectory(ModInfo.lpBaseOfDll, LibraryName, ProcName);
+    begin
+      Stub := ScanImportDirectory(ModInfo.lpBaseOfDll, LibraryName, ProcName);
+      MessageBox(0, PAnsiChar(IntToStr(Integer(ModInfo.lpBaseOfDll))), 'base', 0);
+    end
+  else
+    MessageBox(0, PAnsiChar(IntToStr(GetLastError)), 'GetLastError after getmodule info', 0);
 
   if Stub <> nil then
     begin
@@ -505,7 +558,9 @@ begin
       VirtualProtect(Stub, sizeof(Pointer), OldProtect, OldProtect);
 //      RunThreads;
       Result := true;
-    end;
+    end
+  else
+    MessageBox(0, 'import not found', 'error', 0);
 end;
 
 end.
