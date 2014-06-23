@@ -163,16 +163,16 @@ begin
   //function PatchIAT(Module: HMODULE; LibraryName, ProcName: PAnsiChar; HookProc: Pointer; var SaveProc: Pointer): Boolean;
 
   Module := GetModuleHandle(nil); // what module? what to write here?
-
+  messagebox(0, PAnsiChar(inttohex(Module, 8)), 'Module handle', 0 );
   //temp := 'Module has beed identified: ' + quickres + ' - '+ inttostr(integer(Module));
   //messagebox(0, PChar(temp) , 'Library police', 0);
 
-  result:= result and   PatchIAT(Module, PAnsiChar('kernel32.dll'), PAnsiChar('WriteFile'), @My_FileWrite, SaveProcWrite);
+  PatchIAT(Module, PAnsiChar('kernel32.dll'), PAnsiChar('WriteFile'), @My_FileWrite, SaveProcWrite);
 
   //temp := 'Filewrite has been patched: ' + quickres + inttostr(integer(SaveProcWrite));
   //messagebox(0, PChar(temp) , 'Library police', 0);
 
-  result:= result and   PatchIAT(Module, 'kernel32.dll', 'ReadFile' , @My_FileRead , SaveProcRead ); //i have no idea if this will just work -_- fingers crossed
+  PatchIAT(Module, 'kernel32.dll', 'ReadFile' , @My_FileRead , SaveProcRead ); //i have no idea if this will just work -_- fingers crossed
 
   //temp:= 'File read has been patched: ' + quickres;
   //messagebox(0, PChar(temp) , 'Library police', 0);
@@ -185,7 +185,7 @@ begin
   finally
   //resume proc - there's an app for that
   //RunProcess( TTHREADENTRY32.th32OwnerProcessID );
-  result:= result and   RunThreads();
+  RunThreads();
   //temp := 'Threads have resumed' + quickres;
   //messagebox(0, PChar(temp) , 'Library police', 0);
   //except
@@ -198,130 +198,6 @@ begin
   end;
   //  result is true if everything is ok, else false;
 end;
-
-////////////////////////////////////////////////////////////////////////////////////////////////////
-//BOOL WINAPI GetModuleInformation(
-//327  #   __in   HANDLE hProcess,
-//328  #   __in   HMODULE hModule,
-//329  #   __out  LPMODULEINFO lpmodinfo,
-//330  #   __in   DWORD cb
-//331  # );
-//332 -def GetModuleInformation(hProcess, hModule, lpmodinfo = None):
-//333      _GetModuleInformation = windll.psapi.GetModuleInformation
-//334      _GetModuleInformation.argtypes = [HANDLE, HMODULE, LPMODULEINFO, DWORD]
-//335      _GetModuleInformation.restype = bool
-//336      _GetModuleInformation.errcheck = RaiseIfZero
-//337
-//338      if lpmodinfo is None:
-//339          lpmodinfo = MODULEINFO()
-//340      _GetModuleInformation(hProcess, hModule, byref(lpmodinfo), sizeof(lpmodinfo))
-//341      return lpmodinfo
-
-//BOOL WINAPI K32GetModuleInformation(HANDLE process, HMODULE module,
-//                                    MODULEINFO *modinfo, DWORD cb)
-//{
-//    LDR_MODULE ldr_module;
-//
-//    if (cb < sizeof(MODULEINFO))
-//    {
-//        SetLastError(ERROR_INSUFFICIENT_BUFFER);
-//        return FALSE;
-//    }
-//
-//    if (!get_ldr_module(process, module, &ldr_module))
-//        return FALSE;
-//
-//    modinfo->lpBaseOfDll = ldr_module.BaseAddress;
-//    modinfo->SizeOfImage = ldr_module.SizeOfImage;
-//    modinfo->EntryPoint  = ldr_module.EntryPoint;
-//    return TRUE;
-//}
-
-
-//
-//Function GetModuleInformation(hProcess,hModule:THandle; lpmodinfo: pointer; cb:Dword):pointer; //type
-//begin
-//  //if lpModInfo = nil then lpmodInfo := MODULEINFO(); //no such function - not even in example
-//  //_GetModuelInformation(hProcess, hModule, byref(lpmodinfo),sizeof(lpmodinfo));
-//
-//  ldr_module: LDR_MODULE; // no friggen way this will work
-//  if cd < sizeof(MODULEINFO) then
-//  begin
-//    SetLastError( ERROR_INSUFFICIENT_BUFFER );
-//    result  := false;
-//    exit;
-//  end;
-//
-//  if ( not get_ldr_module(process, module, @ldr_module)) then //check what it returns - might not be a bool
-//  begin
-//    result:= false;
-//    exit;
-//  end;
-//
-//  lpmodinfo.lpBaseOfDll := ldr_module.BaseAddress;
-//  lpmodinfo.SizeOfImage := ldr_module.SizeOfImage;
-//  lpmodinfo.EntryPoint  := ldr_module.EntryPoint;
-//  result   :=  true;
-//end;
-//
-//  result:=lpModInfo;
-//end;
-//
-//////////////////////////////////////////////////////////////////////////////////////////////////////
-////BOOL get_ldr_module(HANDLE process, HMODULE module, LDR_MODULE *ldr_module)
-////{
-////    MODULE_ITERATOR iter;
-////    INT ret;
-////
-////    if (!init_module_iterator(&iter, process))
-////        return FALSE;
-////
-////    while ((ret = module_iterator_next(&iter)) > 0)
-////        /* When hModule is NULL we return the process image - which will be
-////         * the first module since our iterator uses InLoadOrderModuleList */
-////        if (!module || module == iter.ldr_module.BaseAddress)
-////        {
-////            *ldr_module = iter.ldr_module;
-////            return TRUE;
-////        }
-////
-////    if (ret == 0)
-////        SetLastError(ERROR_INVALID_HANDLE);
-////
-////    return FALSE;
-////}
-//
-//get_ldr_module(process: THandle; module HModule; ^ldr_module: LDR_MODULE) //totally worng - fix later
-//var
-//  iter: MODULE_ITERATOR;
-//  ret: integer;
-//begin
-//
-//  if (not init_module_iterator(@iter, process))
-//  begin
-//    result:= false;
-//    exit;
-//  end
-//
-//  while ((ret) > 0) do
-//  begin
-//    ret := module_iterator_next(@iter);
-//
-//    if (not (module or module = iter.iidl_module.BaseAdress) ) //why does this look like i'm drunk
-//    begin
-//      ^ldr_module := iter.idr_module;
-//      result:= true;
-//      exit;
-//    end;
-//
-//    if ret = 0 then setlasterror(ERROR_INVALID_HANDLE);
-//
-//    result:=false;
-//  end;
-//
-//end;
-
-///////////////////////////////////////////////////////////////////////////////////////////////////
 
 function StopProcess(ProcessId: dword): boolean;
 var
@@ -443,10 +319,10 @@ begin
   IATDirBaseRVA := PEHeader^.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IAT].VirtualAddress;
   IATDirSize    := PEHeader^.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IAT].Size;
 
-  //messagebox(0, PAnsiChar('DirBaseRVA = ' + Inttostr(integer(DirBaseRVA))), 'ScanImportDirectory', 0);
-  //messagebox(0, PAnsiChar('DirSize = ' + Inttostr(integer(DirSize))), 'ScanImportDirectory', 0);
-  //messagebox(0, PAnsiChar('IATDirBaseRVA = ' + Inttostr(integer(IATDirBaseRVA))), 'ScanImportDirectory', 0);
-  //messagebox(0, PAnsiChar('IATDirSize = ' + Inttostr(integer(IATDirSize))), 'ScanImportDirectory', 0);
+  messagebox(0, PAnsiChar('DirBaseRVA = ' + Inttostr(integer(DirBaseRVA))), 'ScanImportDirectory', 0);
+  messagebox(0, PAnsiChar('DirSize = ' + Inttostr(integer(DirSize))), 'ScanImportDirectory', 0);
+  messagebox(0, PAnsiChar('IATDirBaseRVA = ' + Inttostr(integer(IATDirBaseRVA))), 'ScanImportDirectory', 0);
+  messagebox(0, PAnsiChar('IATDirSize = ' + Inttostr(integer(IATDirSize))), 'ScanImportDirectory', 0);
 
   if (DirBaseRVA = 0) or (DirSize = 0) or (IATDirBaseRVA = 0) or (IATDirSize = 0) then Exit;
 
@@ -496,9 +372,10 @@ begin
           messagebox(0, 'Is Bad Read Pointer at Base + PID^name', 'ScanImportDirectory',0);
           Break;
         end;
-
+        messageBox(0, PAnsiChar(AnsiString('found module: ')+AnsiString(PAnsiChar(Base + PID^.Name))), 'log', 0);
         if AnsiStrIComp(PAnsiChar(Base + PID^.Name), ModuleName) = 0 then
           begin
+            MessageBox(0, 'module found!', '', 0);
             i := 0;
             Thunk := PCardinal(Base + PID^.OriginalFirstThunk);
             while (Thunk <> nil) and not IsBadReadPtr(Thunk, sizeof(Cardinal)) do
@@ -543,7 +420,7 @@ begin
   if GetModuleInformation(GetCurrentProcess, Module, @ModInfo, sizeof(ModInfo)) then
     begin
       Stub := ScanImportDirectory(ModInfo.lpBaseOfDll, LibraryName, ProcName);
-      MessageBox(0, PAnsiChar(IntToStr(Integer(ModInfo.lpBaseOfDll))), 'base', 0);
+     // MessageBox(0, PAnsiChar(IntToStr(Integer(ModInfo.lpBaseOfDll))), 'base', 0);
     end
   else
     MessageBox(0, PAnsiChar(IntToStr(GetLastError)), 'GetLastError after getmodule info', 0);

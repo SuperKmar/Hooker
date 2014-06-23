@@ -108,7 +108,8 @@ var
   InjInfo: TInjectStruct;
   Kernel32: HMODULE;
 
-  inputBuffer: array [0..512] of Char;
+  inputBuffer: array [0..1024] of Char;
+  buffsize: integer;
   tempstring:string;
   BytesRead: longword;
   res:boolean;
@@ -193,14 +194,13 @@ begin
    //
 
 
-  Pipe := CreateNamedPipe('\\.\pipe\spypipe',
+  Pipe := CreateNamedPipe('\\.\PIPE\spypipe',
                          PIPE_ACCESS_INBOUND,
-                         PIPE_TYPE_MESSAGE or
-                         PIPE_READMODE_MESSAGE or
+                         PIPE_TYPE_BYTE or      //PIPE_TYPE_MESSAGE or PIPE_READMODE_MESSAGE or
                          PIPE_NOWAIT,
-                         10,
-                         9001,
-                         9001,
+                         1,
+                         1024,
+                         1024,
                          0,
                          nil); //bullshit - recheck the paramaters... maybe we'll do filemapping instead of this crap
 
@@ -214,37 +214,55 @@ begin
 
     //output.Items.add('thread is working');
 
-    if ConnectNamedPipe(Pipe, nil) then
-    begin //we have connected to a pipe
-      //do something here
-
-      for i:= 0 to 512 do
-        inputBuffer[i] := #0;
-
-      res:= ReadFile( Pipe,
-                      inputBuffer,
-                      512,
-                      BytesRead,
-                      nil);
-
-
-      If res then
-      begin
-        tempstring:=string(inputBuffer);
-        output.Items.add('incoming: '+tempstring);
-        tempstring:='';
-      end else
-      begin
-        output.Items.add('not incoming: '+tempstring);
-      end;
-
-
-    end else
-    begin
-      output.Items.add('Can"t conect');
-    end;
+    //if ConnectNamedPipe(Pipe, nil) then
+    //begin //we have connected to a pipe
+    //  //do something here
+    //
+    //  for i:= 0 to 512 do
+    //    inputBuffer[i] := #0;
+    //
+    //  res:= ReadFile( Pipe,
+    //                  inputBuffer,
+    //                  512,
+    //                  BytesRead,
+    //                  nil);
+    //
+    //
+    //  //If res then
+    //  //begin
+    //  //  tempstring:=string(inputBuffer);
+    //  //  output.Items.add('incoming: '+tempstring);
+    //  //  tempstring:='';
+    //  //end else
+    //  //begin
+    //  //  output.Items.add('not incoming: ');
+    //  //end;
+    //
+    //
+    //end else
+    //begin
+    //  //output.Items.add('Can"t conect');
+    //end;
     //the things we do without the pipe... is there anything here?
+    ConnectNamedPipe(Pipe, nil);
+    If GetLastError = ERROR_PIPE_CONNECTED then
+    begin
+        res:= ReadFile( Pipe,
+                        buffsize,
+                        SizeOf(integer),
+                        BytesRead,
+                        nil);
 
+        output.Items.Add('incoming '+inttostr(buffsize) + ' Bytes');
+
+      res := ReadFile( Pipe,
+                       inputbuffer,
+                       buffsize,
+                       BytesRead,
+                       nil);
+
+      output.Items.Add('got msg: ' + string(inputbuffer));
+    end;
 
 
   end; // end of while not traminated and connected
