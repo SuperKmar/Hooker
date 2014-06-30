@@ -9,84 +9,20 @@ uses
   { you can add units after this };
 
 
-
-
-function CallPipe(name: string; msg: string; ntimeout: DWORD): string;
-const
-  BUFSIZE = 1024;
-var
-  pipeHandle: THandle;
-  ntowrite, nwritten: DWORD;
-  ntoread, nread: DWORD;
-  rc: boolean;
-  buffer: PChar;
-begin
-  if not WaitNamedPipe(PChar(name), ntimeout) then
-  begin
-    Result := '*No pipe';
-    Exit;
-  end;
-  pipeHandle := CreateFile( PChar(name),
-                            GENERIC_READ or GENERIC_WRITE,
-                            FILE_SHARE_READ,
-                            nil,
-                            OPEN_EXISTING,
-                            FILE_ATTRIBUTE_NORMAL,
-                            0);
-
-  if pipeHandle = INVALID_HANDLE_VALUE then
-    Result := '*Open error'
-  else
-  begin
-    GetMem(buffer, BUFSIZE);
-    try
-      ntowrite := length(msg);
-      Move(msg[1], buffer^, ntowrite);
-      rc := WriteFile(pipeHandle, buffer^, ntowrite, nwritten, nil);
-      if (not rc) or (ntowrite <> nwritten) then
-        Result := '*Write error'
-      else
-      begin
-        ntoread := BUFSIZE;
-        ReadFile(pipeHandle, buffer^, ntoread, nread, nil);
-        SetLength(Result, nread);
-        Move(buffer^, Result[1], nread);
-      end;
-    finally
-      FreeMem(buffer);
-    end;
-    CloseHandle(pipeHandle);
-  end;
-end;
-
-
-
 function ThreadProc(lParam: Integer): Integer; stdcall;
-const
-  buffsize = 1024;
 var
-  pipename:string;
-  pipehandle:THandle;
-  message:string;
-  Len :integer;
-  BytesWritten: longword;
-  res:boolean;
-  readbuffer: PAnsiChar;
-  bytesread:longword;
+  MutexHandle: THandle;
+
+ function MsgSize(Message:String):integer;
+ begin
+     Result := Length(Message)*SizeOf(Char) + 1;
+ end;
+
 begin
   // here we... what do we even do here?
-
-  try
-  placeholder;
-
-  except
-    on E: Exception do
-      MessageBox(0, PAnsiChar(AnsiString(E.Message)), 'error', 0);
-  end; //}
-
+  //procaddress:= GetProcessID;
+  InitializeCriticalSection(DangerAllAroundUs);
   pipename:= '\\.\PIPE\spypipe';
-  //MessageBox(0, 'Starting another thread on this bad boy', 'lalalala', 0);
-
   PipeHandle := CreateFile( '\\.\PIPE\spypipe',
                             GENERIC_WRITE, //GENERIC_READ or
                             FILE_SHARE_WRITE, //FILE_SHARE_READ or
@@ -94,80 +30,33 @@ begin
                             OPEN_EXISTING,
                             0,
                             0); //}
+  try
+    placeholder;
+  except
+    on E: Exception do
+      MessageBox(0, PAnsiChar(AnsiString(E.Message)), 'error', 0);
+  end; //}
 
+  setmsg('Hooking complete');
 
+  MutexHandle:=CreateMutex(nil,true,'Kmar');
 
-  //MessageBox(0, PAnsiChar('Got the pipe handle on this side: ' + inttostr(integer(PipeHandle))), 'Pipe', 0);
-  //CallPipe(Pipename, message, 1000);
-  Message := ( 'Hello boss! I am in the enemy program. They suspect nothing' );
-  Len := Length(Message)*SizeOf(Char) + 1;
+  while WaitForSingleObject(MutexHandle, 25) > 0 do //(WAIT_TIMEOUT or WAIT_FAILED)
+  begin //non 0 seems to work well enough
+    sleep(25);
+  end;
 
-  res := WriteFile( PipeHandle,
-                    Len,
-                    SizeOf(len),
-                    BytesWritten,
-                    nil); //}
-
-  if res then
-    messageBox(0, PAnsiChar('Writing length succesful: ' + inttostr(BytesWritten)) , 'writing', 0)
-  else
-    messageBox(0, 'Writing length failed', 'writing', 0);
-
-  res := WriteFile( PipeHandle,
-                    PChar(Message)^,
-                    Len,
-                    BytesWritten,
-                    nil); //}
- // res:= true;
-
-//  while res do
-//  begin
-{    res:=CallNamedPipe( '\\.\PIPE\spypipe', //not sure how many "\" there are in the front
-                        PChar(Message),
-                        (Length(Message)+1)*sizeof(char),
-                        readbuffer,
-                        Buffsize*sizeof(char),
-                        &bytesread,
-                        20000
-                        ); //}
-
-
-
-  //if res then message:= 'write succesful' else message:= 'write failed';
-  messagebox(0, PAnsiChar('Bytes written: ' + inttostr(BytesWritten)), PAnsiChar(message) , 0); //}
-//  end;
-
-
+  RestoreHooks();
+  ReleaseMutex(MutexHandle);
   closehandle(PipeHandle);
-  //while not terminated do
-  //begin
-  //  //listen for stuff?
-  //  //set up the pipeline for a termination command;
-  //end;
-  freelibraryandexitthread(hinstance, 0); // this cleans up after it self
+  DeleteCriticalSection(DangerAllAroundUs);
+  freelibraryandexitthread(hinstance, 0);
 end;
-
-
-
-
 
 var
   Th: THandle;
   ThID: DWORD;
 begin
-  //main proc code goes here
-
-
-  //placeholder; //this stops, injects and resumes
-
-  //create a new thread for keeping the injected stuff on a roll
-  //new threads are harder then this... goto wasm :(
-  //messagebox(0, 'Beggining the inside thread', 'Thread making', 0);
-//  MyInjThread := InjThread.Create(true);
-//  MyInjThread.FreeOnTerminate:=true;
-//  MyInjThread.Resume;
-  //messagebox(0, 'thread weaving done... now things die', 'Thread making', 0);
-
   Th := CreateThread(nil, 0, @ThreadProc, nil, 0, THID);
   CloseHandle(Th);
 end.

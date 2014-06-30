@@ -3,7 +3,7 @@ unit IATHook;
 interface
 
 uses
-  Windows, JwaTlHelp32, SysUtils, psapi; //PSAPI, was used here, can't find anymore :(
+  Windows, {JwaTlHelp32, }SysUtils, psapi, dirtyhook; //PSAPI, was used here, can't find anymore :(
 
 type
   TTHREADENTRY32 = packed record
@@ -41,38 +41,6 @@ type
 
   ////////////////////////////////////////////////////////////////////////////////////////////
 
-  //TModuleInfo = packed record
-  //  OverlayNumber: Word;  // Overlay number
-  //  LibraryIndex: Word;   // Index into sstLibraries subsection
-  //                                          // if this module was linked from a library
-  //  SegmentCount: Word;   // Count of the number of code segments
-  //                        // this module contributes to
-  //  DebuggingStyle: Word; // Debugging style  for this  module.
-  //  NameIndex: DWORD;     // Name index of module.
-  //  TimeStamp: DWORD;     // Time stamp from the OBJ file.
-  //  Reserved: array[0..2] of DWORD; // Set to 0.
-  //  Segments: array[0..0] of TSegmentInfo;
-  //                        // Detailed information about each segment
-  //                        // that code is contributed to.
-  //                        // This is an array of cSeg count segment
-  //                        // information descriptor structures.
-  //end;
-
-
-  /////////////////////////////////////////////////////////////////////////////////////////////
-
-
-  //class MODULEINFO(Structure):
-  //     _fields_ = [
-  //         ("lpBaseOfDll",     LPVOID),    # remote pointer
-  //         ("SizeOfImage",     DWORD),
-  //         ("EntryPoint",      LPVOID),    # remote pointer
-  // ]
- // # typedef struct _MODULEINFO {
- //53  #   LPVOID lpBaseOfDll;
- //54  #   DWORD  SizeOfImage;
- //55  #   LPVOID EntryPoint;
- //56  # } MODULEINFO, *LPMODULEINFO;
  TModuleInfo = record
    lpBaseOfDLL: pointer;
    SizeOfImage: DWord;
@@ -82,7 +50,15 @@ type
 
 
 var
-  message:String;
+//  message:String;
+  dodirtyhook: boolean;
+  MessageHasChanged: longint;
+  Restore_WriteFile, Restore_ReadFile: pointer;
+  terminated:boolean = false;
+  DangerAllAroundUs: TCRITICALSECTION;
+
+  pipehandle: THandle;
+  pipename:string;
 
 
 const
@@ -111,24 +87,115 @@ function RunThreads(): boolean;
 
 function placeholder():boolean; //this might be called "DLLMain" - try to rename later
 
+function restoreHooks():boolean;
+
 
 //Function FileWrite (Handle : THandle; const Buffer; Count : Longint) : Longint;
-function my_FileWrite(Handle : THandle; const Buffer; Count : Longint) : Longint;
+function my_FileWrite(AFile: THandle; Buffer: Pointer; BytesToWrite: Cardinal; var BytesWritten: Cardinal; Overlapped: POverlapped): LongBool; stdcall;
 //Function FileRead (Handle : THandle; out Buffer; Count : longint) : Longint;
-function my_FileRead (Handle : THandle; out Buffer; Count : longint) : Longint;
+function my_FileRead (AFile: THandle; Buffer: Pointer; BytesToRead: Cardinal; var BytesRead: Cardinal; Overlapped: POverlapped): LongBool; stdcall;
 
-implementation
-function my_FileWrite(Handle : THandle; const Buffer; Count : Longint) : Longint;
+procedure setmsg(msg:string);
+
+type
+  TWriteFileProc= function(AFile: THandle; Buffer: Pointer; BytesToWrite: Cardinal; var BytesWritten: Cardinal; Overlapped: POverlapped): LongBool; stdcall;
+  TReadFileProc = function(AFile: THandle; Buffer: Pointer; BytesToRead:  Cardinal; var BytesRead:    Cardinal; Overlapped: POverlapped): LongBool; stdcall;
+
+implementation /////////////////////////////////////////////////////////////////
+
+function MsgSize(Message:String):integer;
 begin
-  result := FileWrite(Handle, Buffer,  Count );
-//  message:= 'File is being written';
-  messagebox(0,'File is being written!', 'Some program is doing something', 0);
+    Result := Length(Message)*SizeOf(Char) + 1;
 end;
 
-function my_FileRead (Handle : THandle; out Buffer; Count : longint) : Longint;
+procedure setmsg(msg:string);
+var
+  message:string;
+  Len :integer;
+  BytesWritten: longword;
+  res:boolean;
 begin
-  result := FileRead(Handle, Buffer, Count);
-  messagebox(0, 'File is being read!', 'Some program is doing something', 0);
+ // exit;
+
+  EnterCriticalSection(DangerAllAroundUs);
+
+  message := msg;
+
+  //messagebox(0, PChar(msg), 'sending', 0);
+
+    Len :=MsgSize(Message);
+
+    if Restore_WriteFile = nil then
+    begin
+    res := WriteFile( PipeHandle,
+                      Len,
+                      SizeOf(len),
+                      BytesWritten,
+                      nil); //}
+
+
+    res := WriteFile( PipeHandle,
+                      PChar(Message)^,
+                      Len,
+                      BytesWritten,
+                      nil); //}
+
+    end else
+    begin
+      res := TWriteFileProc(Restore_WriteFile)( PipeHandle,
+                                                @Len,
+                                                SizeOf(len),
+                                                BytesWritten,
+                                                nil); //}
+
+      res := TWriteFileProc(Restore_WriteFile)( PipeHandle,
+                                                PChar(Message),
+                                                Len,
+                                                BytesWritten,
+                                                nil); //}
+
+    end;
+  //figure out how to not spam the shit out of the system... not that it's resisting though
+  ///sleep(10);
+  LeaveCriticalSection(DangerAllAroundUs);
+end;
+
+
+
+function my_FileWrite(AFile : THandle; Buffer: Pointer;  BytesToWrite: Cardinal; var BytesWritten: Cardinal; Overlapped: POverlapped): LongBool; stdcall;
+begin
+
+  if Restore_WriteFile=nil then
+  begin
+    result := WriteFile(AFile, Buffer,  BytesToWrite, BytesWritten, Overlapped );
+  end else
+  begin
+    TWriteFileProc(Restore_WriteFile)(AFile, Buffer, BytesToWrite, BytesWritten, Overlapped);
+  end;
+
+  setmsg('FileWrite ('+ inttohex(AFile,8)+', '+ inttohex(integer(buffer),8)+', '+ inttostr(BytesToWrite)+', '+ inttostr(BytesWritten)+', '+ inttohex(Cardinal(Overlapped) ,8)+')');
+  //messagebox(0,'write','',0);
+  //setmsg('FileWrite');
+end;
+
+function my_FileRead (AFile: THandle; Buffer: Pointer; BytesToRead: Cardinal; var BytesRead: Cardinal; Overlapped: POverlapped): LongBool; stdcall;
+begin
+
+  if Restore_ReadFile = nil then
+  begin
+    result := ReadFile(AFile, Buffer, BytesToRead, BytesRead, Overlapped);
+  end else
+  begin
+    try
+    result := TReadFileProc(Restore_ReadFile)(AFile, Buffer, BytesToRead, BytesRead, Overlapped);
+    Except
+      on E: Exception do
+        MessageBox(0, PAnsiChar(AnsiString(E.Message)), 'error', 0);
+    end;
+  end;
+  setmsg('FileRead (' + inttohex(AFile,8)+', '+ inttohex(integer(buffer),8)+', '+ inttostr(BytesToRead)+', '+ inttostr(BytesRead)+', '+ inttohex(Cardinal(Overlapped),8)+ ')');
+
+  //messagebox(0, 'File is being read!', 'Some program is doing something', 0);
 end;
 
 
@@ -136,67 +203,80 @@ function placeholder():boolean;
 var
   SaveProcWrite, SaveProcRead: PCardinal;
   Module:HMODULE;
-  temp:string;
-
-function quickres:string;
-begin
-  if placeholder then result:= 'Success' else result := 'failure';
-end;
+  KernelMod: HMODULE;
+  FuncPtr: Pointer;
 
 begin
   result:=true;
   //stop proc - there's an app for that
-  result:= result and StopThreads();
+  result:= StopThreads();
   if not result then exit;
-//  temp := 'Threads have stopped: '+quickres;
   try
-
-
-  try
-  //messagebox(0, PChar(temp), 'Library police', 0);
-  ////StopProcess( TTHREADENTRY32.th32OwnerProcessID );   //assume thix will fix itself when psapi gets fixed
-
+    try
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////
-  ////start hooking - what we need is...
+  /////////////////////////////////////////START HOOKING///////////////////////////////////////////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-  //function PatchIAT(Module: HMODULE; LibraryName, ProcName: PAnsiChar; HookProc: Pointer; var SaveProc: Pointer): Boolean;
+      Module := GetModuleHandle(nil);
+      KernelMod := GetModuleHandle('Kernel32.dll');
 
-  Module := GetModuleHandle(nil); // what module? what to write here?
-  messagebox(0, PAnsiChar(inttohex(Module, 8)), 'Module handle', 0 );
-  //temp := 'Module has beed identified: ' + quickres + ' - '+ inttostr(integer(Module));
-  //messagebox(0, PChar(temp) , 'Library police', 0);
+      //function PatchIAT(Module: HMODULE; LibraryName, ProcName: PAnsiChar; HookProc: Pointer; var SaveProc: Pointer): Boolean;
+      result := PatchIAT(Module, PAnsiChar('kernel32.dll'), PAnsiChar('WriteFile'), @My_FileWrite, SaveProcWrite);
 
-  PatchIAT(Module, PAnsiChar('kernel32.dll'), PAnsiChar('WriteFile'), @My_FileWrite, SaveProcWrite);
+      if not result then
+      begin
+        setmsg('Patch IAT has failed at WriteFile - attempting DirtyHook');
+      end else setmsg('PatchIAT succesful at WriteFile');
 
-  //temp := 'Filewrite has been patched: ' + quickres + inttostr(integer(SaveProcWrite));
-  //messagebox(0, PChar(temp) , 'Library police', 0);
+      if (not result) and (dodirtyhook) then
+        begin
+          FuncPtr := GetProcAddress(KernelMod, 'WriteFile');
+          result := HookCode(FuncPtr, @My_FileWrite, Restore_WriteFile);
+        end;
+      if not result then
+      begin
+        setmsg('DirtyHook Has Failed at writefile');
+      end else setmsg('Dirty Hook succesful at WriteFile');
+   /////////////////////////////////////////////////////////////////////////////////////////////////////////////
+      result := PatchIAT(Module, 'kernel32.dll', 'ReadFile' , @My_FileRead , SaveProcRead ); //i have no idea if this will just work -_- fingers crossed
+      if not result then
+      begin
+        setmsg('PatchIAT has failed at ReadFile - atempting DirtyHook');
+      end else setmsg('PatchIAT succesful at ReadFile');
 
-  PatchIAT(Module, 'kernel32.dll', 'ReadFile' , @My_FileRead , SaveProcRead ); //i have no idea if this will just work -_- fingers crossed
-
-  //temp:= 'File read has been patched: ' + quickres;
-  //messagebox(0, PChar(temp) , 'Library police', 0);
+      if (not result) and (dodirtyhook) then
+      begin
+        FuncPtr := GetProcAddress(KernelMod, 'ReadFile');
+        result := HookCode(FuncPtr, @My_FileRead, Restore_ReadFile);
+      end;
+      if not result then
+      begin
+        setmsg('DirtyHook Has Failed at ReadFile');
+      end else setmsg('DirtyHook successful at ReadFile');
 
 
   /////////////////////////////////////////////////////////////////////////////////////////////////////
-  //set transfer method (i guess by pipe? virtual mem should work as well...)
+  ///////////set transfer method (i guess by pipe? virtual mem should work as well...)/////////////////
   /////////////////////////////////////////////////////////////////////////////////////////////////////
-  //i'll do it after message box shows something
-  finally
-  //resume proc - there's an app for that
-  //RunProcess( TTHREADENTRY32.th32OwnerProcessID );
-  RunThreads();
-  //temp := 'Threads have resumed' + quickres;
-  //messagebox(0, PChar(temp) , 'Library police', 0);
-  //except
-  end;
-
+    finally
+      RunThreads();
+    end;
   except
-
     messagebox(0, 'try-except case', ',' , 0);
-
   end;
-  //  result is true if everything is ok, else false;
+end;
+
+function restoreHooks():boolean;
+begin
+  result:=true;
+
+
+  If Restore_WriteFile <> nil then
+    UnHookCode(Restore_WriteFile);
+
+  if Restore_ReadFile <> nil then;
+    UnhookCode(Restore_ReadFile);
+
 end;
 
 function StopProcess(ProcessId: dword): boolean;
@@ -300,7 +380,7 @@ var
   SectionsNumber: Cardinal;
   SectionHeader: PImageSectionHeader;
 
-  PID, TempPID: PImageImportDescriptor;
+  PID: PImageImportDescriptor;
 
   Thunk: PCardinal;
 
@@ -319,12 +399,11 @@ begin
   IATDirBaseRVA := PEHeader^.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IAT].VirtualAddress;
   IATDirSize    := PEHeader^.OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IAT].Size;
 
-  messagebox(0, PAnsiChar('DirBaseRVA = ' + Inttostr(integer(DirBaseRVA))), 'ScanImportDirectory', 0);
-  messagebox(0, PAnsiChar('DirSize = ' + Inttostr(integer(DirSize))), 'ScanImportDirectory', 0);
-  messagebox(0, PAnsiChar('IATDirBaseRVA = ' + Inttostr(integer(IATDirBaseRVA))), 'ScanImportDirectory', 0);
-  messagebox(0, PAnsiChar('IATDirSize = ' + Inttostr(integer(IATDirSize))), 'ScanImportDirectory', 0);
-
-  if (DirBaseRVA = 0) or (DirSize = 0) or (IATDirBaseRVA = 0) or (IATDirSize = 0) then Exit;
+  if (DirBaseRVA = 0) or (DirSize = 0) or (IATDirBaseRVA = 0) or (IATDirSize = 0) then
+  begin
+    dodirtyhook := true;
+    Exit;
+  end;
 
   SectionsNumber := PEHeader^.FileHeader.NumberOfSections;
   SectionHeader  := PImageSectionHeader(Cardinal(PEHeader)+24{field offset of optional headers}+PEHeader^.FileHeader.SizeOfOptionalHeader);
@@ -334,7 +413,6 @@ begin
     begin
       if IsBadReadPtr(SectionHeader, sizeof(TImageSectionHeader)) then
       begin
-        MessageBox(0, 'Sectionheader is a bad pointer', 'ScanImportDirectory', 0);
         Break;
       end;
       if (DirBaseRVA >= SectionHeader^.VirtualAddress) and (DirBaseRVA < SectionHeader^.VirtualAddress+SectionHeader^.SizeOfRawData) then
@@ -349,33 +427,23 @@ begin
     begin
 //      BadPointer := false;
       PID := PImageImportDescriptor(DirBaseRVA + Base);
-      tempPID:= PID;
-      //MessageBox(0, PAnsiChar(Inttostr(Integer(PID))), 'PID', 0);
-      //
-      //MessageBox(0, PAnsiChar(Inttostr(Integer(PID^.FirstThunk))), 'PID^.FirstThunk', 0);
-      //MessageBox(0, PAnsiChar(Inttostr(Integer(PID^.OriginalFirstThunk))), 'PID^.OriginalFirstThunk', 0);
-
 
       repeat
         if IsBadReadPtr(PID, sizeof(TImageImportDescriptor)) then
         begin
-          messagebox(0, 'Is Bad Read Pointer at PID', 'ScanImportDirectory',0);
           Break;
         end;
         if PID^.OriginalFirstThunk = 0 then
         begin
-          messagebox(0, PAnsiChar(Inttostr(Integer((Integer(PID) - Integer(TempPID)) div 20))), 'ScanImportDirectory - iteration Index',0);
           Break;
         end;
         if IsBadReadPtr(Pointer(Base+PID^.Name), strlen(ModuleName)+1) then
         begin
-          messagebox(0, 'Is Bad Read Pointer at Base + PID^name', 'ScanImportDirectory',0);
           Break;
         end;
-        messageBox(0, PAnsiChar(AnsiString('found module: ')+AnsiString(PAnsiChar(Base + PID^.Name))), 'log', 0);
+
         if AnsiStrIComp(PAnsiChar(Base + PID^.Name), ModuleName) = 0 then
           begin
-            MessageBox(0, 'module found!', '', 0);
             i := 0;
             Thunk := PCardinal(Base + PID^.OriginalFirstThunk);
             while (Thunk <> nil) and not IsBadReadPtr(Thunk, sizeof(Cardinal)) do
@@ -397,33 +465,26 @@ begin
                 Inc(Thunk);
               end;
           end;
-        //TempPID:= PID;
         Inc(PID);
-//        MessageBox(0, PAnsiChar(Inttostr(Integer(PID)) +  '   ' + Inttostr(Integer(tempPID))), 'PID, tempPID', 0);
 
       until Result <> nil;
-    end else
-    begin
-      MessageBox(0, '(Index > -1) and (Index < SectionsNumber) - this condition failed...' , 'ScanImportLibrary', 0 );
-      MessageBox(0, PAnsiChar(Inttostr(Integer(Index))), 'Index of previous message', 0);
     end;
 end;
 
 function PatchIAT(Module: HMODULE; LibraryName, ProcName: PAnsiChar; HookProc: Pointer; var SaveProc: Pointer): Boolean;
 var
-  ModInfo: TModuleInfo;    // this is a problem
+  ModInfo: TModuleInfo;
   Stub: PCardinal;
   OldProtect: Cardinal;
 begin
   Result := false;
   Stub := nil;
+  dodirtyhook:=false;
+
   if GetModuleInformation(GetCurrentProcess, Module, @ModInfo, sizeof(ModInfo)) then
-    begin
-      Stub := ScanImportDirectory(ModInfo.lpBaseOfDll, LibraryName, ProcName);
-     // MessageBox(0, PAnsiChar(IntToStr(Integer(ModInfo.lpBaseOfDll))), 'base', 0);
-    end
-  else
-    MessageBox(0, PAnsiChar(IntToStr(GetLastError)), 'GetLastError after getmodule info', 0);
+  begin
+    Stub := ScanImportDirectory(ModInfo.lpBaseOfDll, LibraryName, ProcName);
+  end;
 
   if Stub <> nil then
     begin
@@ -435,9 +496,7 @@ begin
       VirtualProtect(Stub, sizeof(Pointer), OldProtect, OldProtect);
 //      RunThreads;
       Result := true;
-    end
-  else
-    MessageBox(0, 'import not found', 'error', 0);
+    end;
 end;
 
 end.
